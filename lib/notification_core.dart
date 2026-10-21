@@ -1,36 +1,71 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
+
+import 'models/notification_action_event.dart';
 import 'models/notification_payload.dart';
 
 class NotificationCoreEngine {
-  // Canal de comunicación compartido con la capa nativa (Android / iOS)
-  static const MethodChannel _channel = MethodChannel('com.example.more_notifications/core');
+  NotificationCoreEngine._();
 
-  /// Inicializa los canales nativos de la librería
-  static Future<void> initialize() async {
-    // Aquí puedes configurar escuchas iniciales o estados globales si se requiere
-    print("Inicializando NotificationCoreEngine...");
+  static const MethodChannel _methodChannel =
+      MethodChannel('com.example.more_notifications/core');
+  static const EventChannel _eventChannel =
+      EventChannel('com.example.more_notifications/actions');
+  static StreamSubscription<dynamic>? _actionSubscription;
+  static void Function(NotificationActionEvent event)? _actionHandler;
+  static bool _initialized = false;
+
+  static Future<void> initialize({
+    void Function(NotificationActionEvent event)? onAction,
+  }) async {
+    _actionHandler = onAction;
+    if (_initialized) return;
+
+    _actionSubscription = _eventChannel.receiveBroadcastStream().listen((event) {
+      final actionEvent = NotificationActionEvent.fromMap(
+        Map<Object?, Object?>.from(event as Map),
+      );
+      _actionHandler?.call(actionEvent);
+    });
+    await _methodChannel.invokeMethod<List<dynamic>>('initialize');
+    _initialized = true;
   }
 
-  /// Muestra una notificación usando el payload agnóstico
-  static Future<bool> show(NotificationPayload payload) async {
-    try {
-      // 1. Extraemos los campos principales del payload estructurado
-      final channelId = payload.channelId ?? 'chat_channel';
-      final title = payload.title;
-      final body = payload.body;
+  static Future<bool> show(NotificationPayload notification) async {
+    _ensureInitialized();
+    return await _methodChannel.invokeMethod<bool>(
+          'showNotification',
+          notification.toJson(),
+        ) ??
+        false;
+  }
 
-      // 2. Invocamos el MethodChannel nativo enviando el mapa de argumentos
-      final bool result = await _channel.invokeMethod('showNotification', {
-        'channelId': channelId,
-        'title': title,
-        'body': body,
-      });
+  static Future<void> cancel(int id) async {
+    _ensureInitialized();
+    await _methodChannel.invokeMethod<void>('cancelNotification', {'id': id});
+  }
 
-      print("Notificación ID: ${payload.id} despachada con éxito.");
-      return result;
-    } on PlatformException catch (e) {
-      print("Error al despachar la notificación nativa: ${e.message}");
-      return false;
+  static Future<void> cancelAll() async {
+    _ensureInitialized();
+    await _methodChannel.invokeMethod<void>('cancelAllNotifications');
+  }
+
+  static void onAction(void Function(NotificationActionEvent event) handler) {
+    _ensureInitialized();
+    _actionHandler = handler;
+  }
+
+  static Future<void> dispose() async {
+    await _actionSubscription?.cancel();
+    _actionSubscription = null;
+    _actionHandler = null;
+    _initialized = false;
+  }
+
+  static void _ensureInitialized() {
+    if (!_initialized) {
+      throw StateError('Llama NotificationCoreEngine.initialize() antes de usar la biblioteca.');
     }
   }
 }

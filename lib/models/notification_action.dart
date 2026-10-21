@@ -1,52 +1,31 @@
-/// Representa un botón de acción interactivo dentro de la notificación
 class NotificationAction {
-  final String id;
-  final String label;
-  final bool requiresInput; // Habilita campo de texto directo en la notificación (RemoteInput)
-  final String? iconAsset;
-  final String? inputPlaceholder;
-
   const NotificationAction({
     required this.id,
     required this.label,
     this.requiresInput = false,
-    this.iconAsset,
-    this.inputPlaceholder = "Escribe una respuesta...",
+    this.inputPlaceholder = 'Escribe una respuesta...',
+    this.cancelNotification = false,
   });
 
-  /// Convierte la acción a un mapa JSON para comunicación con plataformas nativas
+  final String id;
+  final String label;
+  final bool requiresInput;
+  final String inputPlaceholder;
+  final bool cancelNotification;
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'label': label,
         'requiresInput': requiresInput,
-        'iconAsset': iconAsset,
         'inputPlaceholder': inputPlaceholder,
+        'cancelNotification': cancelNotification,
       };
 
-  /// Fábrica para reconstruir la acción desde un mapa JSON
-  factory NotificationAction.fromJson(Map<String, dynamic> json) {
-    return NotificationAction(
-      id: json['id'] ?? '',
-      label: json['label'] ?? '',
-      requiresInput: json['requiresInput'] ?? false,
-      iconAsset: json['iconAsset'],
-      inputPlaceholder: json['inputPlaceholder'] ?? "Escribe una respuesta...",
-    );
-  }
-
-  NotificationAction copyWith({
-    String? id,
-    String? label,
-    bool? requiresInput,
-    String? iconAsset,
-    String? inputPlaceholder,
-  }) {
-    return NotificationAction(
-      id: id ?? this.id,
-      label: label ?? this.label,
-      requiresInput: requiresInput ?? this.requiresInput,
-      iconAsset: iconAsset ?? this.iconAsset,
-      inputPlaceholder: inputPlaceholder ?? this.inputPlaceholder,
-    );
-  }
+  factory NotificationAction.fromJson(Map<String, dynamic> json) => NotificationAction(
+        id: json['id'] as String? ?? '',
+        label: json['label'] as String? ?? '',
+        requiresInput: json['requiresInput'] as bool? ?? false,
+        inputPlaceholder: json['inputPlaceholder'] as String? ?? 'Escribe una respuesta...',
+        cancelNotification: json['cancelNotification'] as bool? ?? false,
+      );
 }

@@ -1,30 +1,42 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:more_notifications/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  TestWidgetsFlutterBinding.ensureInitialized();
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  const methods = MethodChannel('com.example.more_notifications/core');
+  const events = EventChannel('com.example.more_notifications/actions');
+  final messenger = TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+  testWidgets('gallery initializes the library and sends a basic notification', (tester) async {
+    final calls = <MethodCall>[];
+    messenger.setMockMethodCallHandler(methods, (call) async {
+      calls.add(call);
+      if (call.method == 'initialize') return <dynamic>[];
+      if (call.method == 'showNotification') return true;
+      return null;
+    });
+    messenger.setMockStreamHandler(
+      events,
+      MockStreamHandler.inline(
+        onListen: (_, _) async {},
+        onCancel: (_) {},
+      ),
+    );
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    await tester.pumpWidget(const NotificationLibraryDemo());
+    await tester.pumpAndSettle();
+
+    expect(find.text('Notificaciones posibles'), findsOneWidget);
+    await tester.tap(find.byTooltip('Mostrar básica'));
+    await tester.pumpAndSettle();
+
+    expect(calls.map((call) => call.method), containsAll(['initialize', 'showNotification']));
+    final showCall = calls.firstWhere((call) => call.method == 'showNotification');
+    expect((showCall.arguments as Map)['id'], 101);
+
+    messenger.setMockMethodCallHandler(methods, null);
+    messenger.setMockStreamHandler(events, null);
   });
 }

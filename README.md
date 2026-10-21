@@ -1,65 +1,102 @@
 # More Notifications
 
-Aplicación Flutter de prueba para mostrar notificaciones locales de Android mediante un `MethodChannel` y una implementación nativa en Kotlin.
+Biblioteca Flutter/Dart para construir notificaciones locales Android con payloads tipados, estilos nativos y acciones configurables. La pantalla de la aplicación es una galería de ejemplos de la biblioteca, no el producto de notificaciones en sí.
 
-## Requisitos
+## Requisitos y estado
 
-- Flutter y Dart compatibles con las versiones indicadas en `pubspec.yaml`.
-- Android Studio o Android SDK con las herramientas de compilación de Android.
-- Un teléfono Android o emulador. El puente de notificaciones actual solo está implementado para Android.
+- Flutter/Dart según el SDK de `pubspec.yaml`.
+- Implementación nativa disponible actualmente: Android.
+- En Android 13 o posterior se solicita permiso al mostrar la primera notificación.
+- Las notificaciones son locales. Push remoto requiere integrar FCM u otro servicio por separado.
 
-## Descargar y ejecutar
+## Integrar desde otro proyecto
 
-Clona el repositorio y entra en la carpeta del proyecto:
+Mientras no se publique en pub.dev, agrega el paquete por ruta local:
+
+```yaml
+dependencies:
+  more_notifications:
+    path: ../more_notifications
+```
+
+Inicializa el motor una vez y crea notificaciones con los modelos exportados:
+
+```dart
+import 'package:more_notifications/more_notifications.dart';
+
+await NotificationCoreEngine.initialize(
+  onAction: (event) {
+    print('Acción: ${event.actionId}, texto: ${event.userResponse}');
+  },
+);
+
+await NotificationCoreEngine.show(
+  NotificationPayload(
+    id: 42,
+    channelId: 'messages',
+    channelName: 'Mensajes',
+    title: 'Ana',
+    body: '¿Nos vemos a las 18?',
+    style: NotificationStyle.messaging(
+      conversationTitle: 'Amigos',
+      isGroupChat: true,
+      messages: [
+        ChatMessage(
+          senderName: 'Ana',
+          text: '¿Nos vemos a las 18?',
+          timestamp: DateTime.now(),
+        ),
+      ],
+    ),
+    actions: const [
+      NotificationAction(
+        id: 'reply',
+        label: 'Responder',
+        requiresInput: true,
+      ),
+    ],
+    extras: const {'conversationId': 'abc-123'},
+  ),
+);
+
+await NotificationCoreEngine.cancel(42);
+```
+
+Las acciones vuelven por `onAction` como `NotificationActionEvent`, incluyendo el ID, texto opcional y `extras`. `cancelAll()` elimina todas las notificaciones publicadas por la app. Reutilizar un mismo `id` actualiza la notificación, lo cual sirve para progreso.
+
+## Estilos disponibles
+
+- `NotificationStyle.basic()`: título y texto.
+- `NotificationStyle.bigText(text: ...)`: texto largo expandible.
+- `NotificationStyle.inbox(lines: ...)`: resumen en varias líneas.
+- `NotificationStyle.messaging(...)`: conversación con mensajes y respuesta en línea si se declara una acción con `requiresInput: true`.
+- `NotificationStyle.progress(progress: ..., max: ..., indeterminate: ...)`: barra de progreso actualizable.
+
+Las acciones aceptan `id`, `label`, `requiresInput`, `inputPlaceholder` y `cancelNotification`. Los datos adicionales del llamador se pasan en `extras` y se devuelven en el evento de acción.
+
+El ejemplo ejecutable está en `lib/main.dart`: presenta cada estilo y permite lanzar una demostración. La opción experimental de fondo usa `RemoteViews`; Android mantiene la cabecera, marco y acciones del sistema. La apariencia final varía por versión y fabricante. No hay una API Flutter o Android compatible que quite esas decoraciones en Android moderno.
+
+## Ejecutar la galería
 
 ```sh
-git clone <URL_DEL_REPOSITORIO>
-cd more_notifications
 flutter pub get
 flutter devices
 flutter run
 ```
 
-Selecciona un escenario o pulsa **Enviar todas las pruebas**. En Android 13 o posterior, acepta el permiso de notificaciones cuando aparezca. Si lo denegaste antes, actívalo en los ajustes del sistema: **Ajustes > Aplicaciones > More Notifications > Notificaciones**. El nombre de las opciones puede variar según el fabricante.
-
-Para compilar el APK de depuración:
+Conceda el permiso de notificaciones cuando Android lo solicite. Si se denegó, habilítalo en los ajustes de la app. Para compilar:
 
 ```sh
 flutter build apk --debug
 ```
 
-## Escenarios incluidos
-
-- Chat de equipo.
-- Mensaje directo.
-- Recordatorio.
-- Aviso importante.
-- Novedad.
-
-Los escenarios tienen presentaciones nativas distintas: los chats usan formato de conversación y respuesta rápida; el recordatorio se expande como texto y permite marcarlo como hecho; la alerta usa formato de aviso y abre la app; el boletín muestra una lista expandida de novedades. El interruptor **Fondo personalizado (experimental)** está apagado por defecto. Al activarlo usa vistas nativas `RemoteViews` con fondo de color y texto contrastante, en las áreas de contenido contraída y expandida. Android conserva el control de la carcasa exterior, encabezado, márgenes y presentación de acciones; algunos fabricantes pueden adaptar también el contenido personalizado. No es posible eliminar por completo el diseño del sistema desde una app normal. Son notificaciones locales de prueba, no mensajes push ni avisos programados.
-
-## Permisos y comportamiento
-
-Android 13 y versiones posteriores requieren permiso en tiempo de ejecución para publicar notificaciones. La app lo solicita al intentar enviar la primera. En Android 8 y posteriores se crean canales de notificación. Android conserva la configuración del canal después de crearlo, así que los cambios de importancia o sonido pueden requerir borrar los datos de la app o probar con un identificador de canal nuevo.
-
-La app no recibe mensajes de WhatsApp ni de otro servidor. Para notificaciones remotas hay que integrar un proveedor push, como Firebase Cloud Messaging, configurar sus credenciales y manejar tokens/dispositivos en un backend.
-
-## Estado de Git
-
-El `.gitignore` de la raíz cubre compilaciones, cachés y archivos locales o de firma. En el entorno de desarrollo usado para este proyecto, Git se inicializó dentro de `android/`, no en esta carpeta raíz. En ese estado Git no incluye `lib/`, este README ni el `.gitignore` raíz. Antes de publicar el proyecto, revisa la raíz que muestra `git rev-parse --show-toplevel` y asegúrate de inicializar/versionar el proyecto desde esta carpeta, sin subir claves ni archivos locales. No se modificó la configuración Git existente.
-
-## Mejoras recomendadas
-
-- Mover el permiso de Android a AndroidX Activity Result APIs, para mantener el flujo de permisos moderno y facilitar su prueba.
-- Añadir pruebas instrumentadas en dispositivos/emuladores para comprobar las variantes nativas y el comportamiento de sus acciones en distintas versiones de Android.
-- Implementar el método del motor en `notification_core.dart` y conectar los modelos de `lib/models/` con el puente nativo; hoy ese motor es una estructura inicial sin despacho real.
-- Añadir pruebas unitarias y de widgets para respuestas del canal, denegación del permiso y los escenarios; las pruebas existentes parecen corresponder al contador de la plantilla y necesitan actualizarse.
-- Añadir recepción de respuestas rápidas en Dart, además del `Toast` actual, y comprobar compatibilidad y apariencia en varios fabricantes Android.
-- Configurar un identificador de aplicación propio antes de distribuir la app y documentar las versiones mínimas de Android que se vayan a soportar.
-
-## Comprobaciones
+## Validar
 
 ```sh
 flutter analyze
 flutter test
 ```
+
+## Publicación
+
+El `pubspec.yaml` mantiene `publish_to: none`; para publicar en pub.dev habría que revisar el nombre, descripción, licencia, documentación de plataformas y soporte no Android. El contrato nativo actual no implementa iOS, Linux, Windows ni macOS.
