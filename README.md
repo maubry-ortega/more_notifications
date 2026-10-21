@@ -36,7 +36,7 @@ flutter build apk --debug
 - Aviso importante.
 - Novedad.
 
-Los escenarios cambian el canal, el remitente y el texto. Actualmente todos usan el mismo estilo nativo de conversación y la misma acción de respuesta rápida; no son estilos visuales Android diferentes. Son notificaciones locales de prueba, no mensajes push ni avisos programados.
+Los escenarios tienen presentaciones nativas distintas: los chats usan formato de conversación y respuesta rápida; el recordatorio se expande como texto y permite marcarlo como hecho; la alerta usa formato de aviso y abre la app; el boletín muestra una lista expandida de novedades. El interruptor **Fondo personalizado (experimental)** está apagado por defecto. Al activarlo usa vistas nativas `RemoteViews` con fondo de color y texto contrastante, en las áreas de contenido contraída y expandida. Android conserva el control de la carcasa exterior, encabezado, márgenes y presentación de acciones; algunos fabricantes pueden adaptar también el contenido personalizado. No es posible eliminar por completo el diseño del sistema desde una app normal. Son notificaciones locales de prueba, no mensajes push ni avisos programados.
 
 ## Permisos y comportamiento
 
@@ -51,8 +51,7 @@ El `.gitignore` de la raíz cubre compilaciones, cachés y archivos locales o de
 ## Mejoras recomendadas
 
 - Mover el permiso de Android a AndroidX Activity Result APIs, para mantener el flujo de permisos moderno y facilitar su prueba.
-- Separar la construcción de notificaciones por estilos reales (básica, mensaje, imagen, progreso), con parámetros explícitos en el canal.
-- Corregir el identificador de notificación y pasarlo al `BroadcastReceiver`; ahora se cancela un ID fijo que no corresponde necesariamente al publicado.
+- Añadir pruebas instrumentadas en dispositivos/emuladores para comprobar las variantes nativas y el comportamiento de sus acciones en distintas versiones de Android.
 - Implementar el método del motor en `notification_core.dart` y conectar los modelos de `lib/models/` con el puente nativo; hoy ese motor es una estructura inicial sin despacho real.
 - Añadir pruebas unitarias y de widgets para respuestas del canal, denegación del permiso y los escenarios; las pruebas existentes parecen corresponder al contador de la plantilla y necesitan actualizarse.
 - Añadir recepción de respuestas rápidas en Dart, además del `Toast` actual, y comprobar compatibilidad y apariencia en varios fabricantes Android.

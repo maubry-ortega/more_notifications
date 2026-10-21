@@ -41,40 +41,54 @@ class _NotificationDemoScreenState extends State<NotificationDemoScreen> {
     _NotificationExample(
       channelId: 'demo_equipo',
       category: 'CHAT DE EQUIPO',
+      style: 'chat',
       title: 'Lucía · Diseño',
       body: 'Ya dejé lista la nueva propuesta. ¿Le echas un vistazo?',
+      lines: [],
       icon: Icons.forum_outlined,
       color: Color(0xFF176B5B),
     ),
     _NotificationExample(
       channelId: 'demo_mensaje_directo',
       category: 'MENSAJE DIRECTO',
+      style: 'chat',
       title: 'Mateo',
       body: 'Voy saliendo, llego en unos diez minutos.',
+      lines: [],
       icon: Icons.chat_bubble_outline,
       color: Color(0xFF3568A8),
     ),
     _NotificationExample(
       channelId: 'demo_recordatorio',
       category: 'RECORDATORIO',
+      style: 'reminder',
       title: 'Agenda',
       body: 'Tu reunión de planificación empieza en 15 minutos.',
+      lines: [],
       icon: Icons.event_note_outlined,
       color: Color(0xFF8B5B16),
     ),
     _NotificationExample(
       channelId: 'demo_alerta',
       category: 'AVISO IMPORTANTE',
+      style: 'alert',
       title: 'Estado del servicio',
       body: 'La sincronización terminó. Tus archivos están al día.',
+      lines: [],
       icon: Icons.notifications_active_outlined,
       color: Color(0xFF9C4545),
     ),
     _NotificationExample(
       channelId: 'demo_novedad',
       category: 'NOVEDAD',
+      style: 'digest',
       title: 'Boletín semanal',
       body: 'Ya está disponible el resumen de novedades de esta semana.',
+      lines: [
+        'Nueva bandeja de entrada',
+        'Mejoras en las respuestas rápidas',
+        'Actualización de privacidad',
+      ],
       icon: Icons.campaign_outlined,
       color: Color(0xFF67549A),
     ),
@@ -82,6 +96,7 @@ class _NotificationDemoScreenState extends State<NotificationDemoScreen> {
 
   final List<String> _activityLog = [];
   bool _isSending = false;
+  bool _useCustomBackground = false;
 
   void _addLog(String message) {
     if (!mounted) return;
@@ -117,8 +132,12 @@ class _NotificationDemoScreenState extends State<NotificationDemoScreen> {
     try {
       final success = await _channel.invokeMethod<bool>('showNotification', {
         'channelId': example.channelId,
+        'style': example.style,
         'title': example.title,
         'body': example.body,
+        'color': example.color.toARGB32(),
+        'useCustomBackground': _useCustomBackground,
+        'lines': example.lines,
       });
       _addLog(success == true
           ? 'Enviada: ${example.category.toLowerCase()} · ${example.title}'
@@ -173,6 +192,16 @@ class _NotificationDemoScreenState extends State<NotificationDemoScreen> {
               backgroundColor: const Color(0xFF176B5B),
               padding: const EdgeInsets.symmetric(vertical: 15),
             ),
+          ),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Fondo personalizado (experimental)'),
+            subtitle: const Text('Colorea el contenido de la notificación; apagado por defecto.'),
+            value: _useCustomBackground,
+            onChanged: _isSending
+                ? null
+                : (value) => setState(() => _useCustomBackground = value),
           ),
           const SizedBox(height: 22),
           const Text(
@@ -245,7 +274,7 @@ class _NotificationDemoScreenState extends State<NotificationDemoScreen> {
               ),
           const SizedBox(height: 14),
           Text(
-            'Todos los ejemplos usan el mismo estilo nativo de conversación con respuesta rápida. Cambian el remitente, el mensaje y el canal; son pruebas locales, no notificaciones push.',
+            'Los chats incluyen respuesta rápida; recordatorios, alertas y resúmenes usan diseños y acciones propios. Android y el fabricante controlan parte de la apariencia. Son pruebas locales, no notificaciones push.',
             style: TextStyle(color: Colors.blueGrey.shade700, fontSize: 13),
           ),
         ],
@@ -258,16 +287,20 @@ class _NotificationExample {
   const _NotificationExample({
     required this.channelId,
     required this.category,
+    required this.style,
     required this.title,
     required this.body,
+    required this.lines,
     required this.icon,
     required this.color,
   });
 
   final String channelId;
   final String category;
+  final String style;
   final String title;
   final String body;
+  final List<String> lines;
   final IconData icon;
   final Color color;
 }
